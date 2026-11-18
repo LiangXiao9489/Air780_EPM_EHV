@@ -27,6 +27,7 @@ port 字段说明：
 
 return {
     name = "EPM",
+    model = "D700Tm_3RS485",   -- 上报给平台的型号（/s2 的 model 状态）
 
     -- 设备支撑
     led_pin      = 27,

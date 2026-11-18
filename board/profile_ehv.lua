@@ -28,6 +28,7 @@ port 字段说明：
 
 return {
     name = "EHV",
+    model = "SW1004V-10",      -- 上报给平台的型号（/s2 的 model 状态）
 
     -- 设备支撑
     led_pin      = 27,

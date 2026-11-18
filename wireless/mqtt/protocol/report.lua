@@ -236,13 +236,12 @@ function report.start_index_real(msg)
     local du = tonumber(msg.du)
     local iv = tonumber(msg.iv) or 5
 
-    -- 不合法时长：不执行，但按协议仍要回 ack（fail = 请求的全部 tag）
+    -- 不合法时长：不执行，但按协议仍要回 ack（统一回 fail:["param"]）
     if du == nil or du < 0 or du > 1800 then
         log.warn("mqtt.report", "indexReal du 非法，不执行", tostring(msg.du))
         for dev_id, body in pairs(msg.d or {}) do
-            local fail_tags = body.ts or {}
             sender.publish(topics.UP_CONTROL_ACK,
-                ack.build("indexRealAck", dev_id, { fail = fail_tags }, body.mid), 1)
+                ack.build("indexRealAck", dev_id, { fail = { "param" } }, body.mid), 1)
         end
         return
     end

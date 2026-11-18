@@ -1,10 +1,10 @@
 --[[
 @module  main
 @summary Air780 EPM / EHV 二合一网关固件入口
-@version 1.7.0
+@version 1.8.0
 @date    2026.11.18
 @usage
-按块移植，当前进度：块 8a（MQTT 上行协议：up / ack / report）
+按块移植，当前进度：块 8b（下行 down / 参数 cfg / OTA）
 
 已完成：
   块 1  板型识别 / 配置 / 看门狗 / LED
@@ -15,15 +15,15 @@
   块 6  EHV 本地 DI/DO 驱动 / 本地采样 / 本地写
   块 7  wireless 网络与 MQTT 基础
   块 8a MQTT 上行协议（up / ack / report）
+  块 8b MQTT 下行协议（down / cfg）+ OTA
 
-后续块逐步放开 require：
-  块 8b wireless 下行协议 down / cfg + OTA
+后续：全链路联调（call / set / indexReal / OTA / 断线重连）
 ]]
 
 require "sys"
 
 PROJECT = "Air780_EPM_EHV"
-VERSION = "1.7.0"
+VERSION = "1.8.0"
 
 pm.ioVol(pm.IOVOL_ALL_GPIO, 3300)
 
