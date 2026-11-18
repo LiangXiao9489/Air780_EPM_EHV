@@ -113,9 +113,9 @@ TABLES.EHV = {
           data_type="bool", scale_factor=1, rw="r", ch=1 },
         { num=2, tag="di_b", s_addr=601, n_addr=601, reg_type=2, reg_count=1,
           data_type="bool", scale_factor=1, rw="r", ch=2 },
-        { num=3, tag="di_c", s_addr=605, n_addr=605, reg_type=2, reg_count=1,
+        { num=3, tag="di_c", s_addr=602, n_addr=602, reg_type=2, reg_count=1,
           data_type="bool", scale_factor=1, rw="r", ch=3 },
-        { num=4, tag="di_d", s_addr=606, n_addr=606, reg_type=2, reg_count=1,
+        { num=4, tag="di_d", s_addr=603, n_addr=603, reg_type=2, reg_count=1,
           data_type="bool", scale_factor=1, rw="r", ch=4 },
 
         -- ===== DO：线圈（reg_type=1，可读写） =====
@@ -123,9 +123,9 @@ TABLES.EHV = {
           data_type="bool", scale_factor=1, rw="rw", ch=1 },
         { num=6, tag="do_b", s_addr=801, n_addr=801, reg_type=1, reg_count=1,
           data_type="bool", scale_factor=1, rw="rw", ch=2 },
-        { num=7, tag="do_c", s_addr=805, n_addr=805, reg_type=1, reg_count=1,
+        { num=7, tag="do_c", s_addr=802, n_addr=802, reg_type=1, reg_count=1,
           data_type="bool", scale_factor=1, rw="rw", ch=3 },
-        { num=8, tag="do_d", s_addr=806, n_addr=806, reg_type=1, reg_count=1,
+        { num=8, tag="do_d", s_addr=803, n_addr=803, reg_type=1, reg_count=1,
           data_type="bool", scale_factor=1, rw="rw", ch=4 },
     },
 }

@@ -58,6 +58,7 @@ sys.taskInit(function()
                 end
             end
         end
+
         sys.wait(period)
     end
 end)

@@ -28,7 +28,15 @@ function _M.get(ch)
     if not pin then
         return nil
     end
-    return gpio.get(pin) and 1 or 0
+    local v = gpio.get(pin)
+    if v == nil then
+        return nil
+    end
+    -- 注意：Lua 里 0 是真值，不能写 v and 1 or 0
+    if v == 1 or v == true then
+        return 1
+    end
+    return 0
 end
 
 return _M
