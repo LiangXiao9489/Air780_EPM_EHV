@@ -1,14 +1,17 @@
 --[[
 @module  main
 @summary Air780 EPM / EHV 二合一网关固件入口
-@version 1.0.0
+@version 1.3.0
 @date    2026.11.18
 @usage
-按块移植，当前进度：块 1（板型识别 + 配置 + 设备支撑）
+按块移植，当前进度：块 3（传输层：core + hardware + uart_lock）
+
+已完成：
+  块 1  板型识别 / 配置 / 看门狗 / LED
+  块 2  点表展开 / store 缓存初始化
+  块 3  Modbus 编解码 / 动态端口 / u1 互斥锁
 
 后续块逐步放开 require：
-  块 2  data/point_table + data/store
-  块 3  modbus/core + modbus/hardware + modbus/uart_lock
   块 4  modbus/master + modbus/write_through
   块 5  modbus/slave
   块 6  local_io/di + do + do_write + sampler
@@ -19,7 +22,7 @@
 require "sys"
 
 PROJECT = "Air780_EPM_EHV"
-VERSION = "1.0.0"
+VERSION = "1.3.0"
 
 pm.ioVol(pm.IOVOL_ALL_GPIO, 3300)
 
@@ -36,11 +39,31 @@ else
     -- 2. 配置：默认值按板型裁剪，require 即加载/落盘
     require "config"
 
-    -- 3. 设备支撑
+    -- 3. 数据层：点表展开 + 缓存初始化（显式调用，采集侧不再负责 init）
+    local store    = require "store"
+    local pt       = require "point_table"
+    local data_ok  = store.init(pt)
+    if not data_ok then
+        -- 点表有误时不启动业务，但仍然喂狗/闪灯，避免变成复位循环
+        log.error("main", "store 初始化失败，点表有误；已跳过业务，仅保活")
+    end
+
+    -- 4. 设备支撑（无论数据层是否就绪都要运行）
     require "ext_wdt"
     require "led_blink"
 
-    log.info("main", "块1 完成：板型/配置/设备支撑就绪")
+    -- 5. 传输层：按板型动态初始化 1~N 路 485
+    if data_ok then
+        local hardware = require "hardware"
+        hardware.init()
+
+        -- u1 互斥锁只在 EPM（有主站链路）时加载
+        if board.is_epm then
+            require "uart_lock"
+        end
+
+        log.info("main", "块3 完成：传输层就绪")
+    end
 end
 
 sys.run()
