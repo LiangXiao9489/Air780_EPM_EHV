@@ -85,6 +85,13 @@ else
         -- 7. 从站应答（两板共用，走 u2）
         require "slave"
         log.info("main", "块5 完成：从站已加载")
+
+        -- 8. 网络与 MQTT 链路（两板完全相同）
+        require "net_4g"
+        require "sntp"
+        -- require "net_watchdog"   -- 网络看门狗：需要时再放开
+        require "basic"
+        log.info("main", "块7 完成：4G/SNTP/MQTT 链路就绪")
     end
 end
 
