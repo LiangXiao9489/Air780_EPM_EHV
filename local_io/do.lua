@@ -6,10 +6,9 @@
 @usage
 引脚来自 board.profile.do_pins / do_en_pin。
 
-硬件锁存时序（按 D700 系列硬件说明）：
-  1. EN 置高，打开锁存
-  2. 设置目标通道电平
-  3. EN 置低，锁存当前状态
+硬件输出使能：
+  EN（GPIO22）为常高电平的"输出使能"，不是锁存脉冲。
+  实测脉冲方式继电器不动作，故与旧版 EHV 保持一致：EN 常高。
 
 状态来源说明：
   GPIO3 会被内核重配，gpio.get 读回不可靠，
@@ -26,29 +25,20 @@ local status = { 0, 0, 0, 0 }
 
 local _M = {}
 
-local function latch(ch, val)
-    if en_pin then
-        gpio.set(en_pin, 1)
-    end
-    gpio.set(pins[ch], val)
-    if en_pin then
-        gpio.set(en_pin, 0)
-    end
-end
-
--- 初始化：全部输出低电平，并锁存一次
+-- 初始化：全部输出低电平
 function _M.init()
     for i = 1, #pins do
         gpio.setup(pins[i], 0, gpio.PULLDOWN)
         status[i] = 0
     end
+    -- EN 常高，打开输出使能
     if en_pin then
-        gpio.setup(en_pin, 0, gpio.PULLDOWN)
+        gpio.setup(en_pin, 1, gpio.PULLDOWN)
     end
     for i = 1, #pins do
-        latch(i, 0)
+        gpio.set(pins[i], 0)
     end
-    log.info("do", "初始化完成", "通道数=" .. #pins, "EN=" .. tostring(en_pin))
+    log.info("do", "初始化完成", "通道数=" .. #pins, "EN=" .. tostring(en_pin) .. " 常高")
 end
 
 -- 设置通道，val 为 0/1；返回 true/false
@@ -57,7 +47,7 @@ function _M.set(ch, val)
         return false
     end
     local v = (val ~= 0) and 1 or 0
-    latch(ch, v)
+    gpio.set(pins[ch], v)
     status[ch] = v
     log.info("do", "通道动作", "CH" .. ch .. "=" .. v)
     return true
