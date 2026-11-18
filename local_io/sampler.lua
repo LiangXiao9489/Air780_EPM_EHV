@@ -52,9 +52,11 @@ sys.taskInit(function()
                 store.write_by_a(dev_id, reg.s_addr, v, 0)
 
                 -- DI 变化时打一条日志，便于现场测试
+                -- 同时唤醒上报 task：change 检测默认 5 秒一轮，短于 5 秒的脉冲会被整段漏掉
                 if reg.reg_type == 2 and last_di[reg.tag] ~= v then
                     last_di[reg.tag] = v
                     log.info("sampler", "DI 变化", reg.tag .. "=" .. v)
+                    sys.publish("MQTT_REPORT_WAKE")   -- 与 report.lua 的 WAKE_TOPIC 保持一致
                 end
             end
         end

@@ -1,10 +1,10 @@
 --[[
 @module  main
 @summary Air780 EPM / EHV 二合一网关固件入口
-@version 1.6.0
+@version 1.7.0
 @date    2026.11.18
 @usage
-按块移植，当前进度：块 6（EHV 本地 DI/DO 与采样）
+按块移植，当前进度：块 8a（MQTT 上行协议：up / ack / report）
 
 已完成：
   块 1  板型识别 / 配置 / 看门狗 / LED
@@ -13,16 +13,17 @@
   块 4  EPM 主站轮询 / 485 写穿透
   块 5  从站应答（两板共用）
   块 6  EHV 本地 DI/DO 驱动 / 本地采样 / 本地写
+  块 7  wireless 网络与 MQTT 基础
+  块 8a MQTT 上行协议（up / ack / report）
 
 后续块逐步放开 require：
-  块 7  wireless 网络与 MQTT 基础
-  块 8  wireless 协议业务 + OTA
+  块 8b wireless 下行协议 down / cfg + OTA
 ]]
 
 require "sys"
 
 PROJECT = "Air780_EPM_EHV"
-VERSION = "1.6.0"
+VERSION = "1.7.0"
 
 pm.ioVol(pm.IOVOL_ALL_GPIO, 3300)
 
@@ -92,6 +93,11 @@ else
         -- require "net_watchdog"   -- 网络看门狗：需要时再放开
         require "basic"
         log.info("main", "块7 完成：4G/SNTP/MQTT 链路就绪")
+
+        -- 9. 上行协议：real / change / realIndex（两板共用，数据源来自 store）
+        -- realIndex 的触发入口在块8b 的 down.lua，本块只验证 real / change
+        require "report"
+        log.info("main", "块8a 完成：上行协议已加载")
     end
 end
 
