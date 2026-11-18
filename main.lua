@@ -51,7 +51,7 @@ else
 
     -- 4. 设备支撑（无论数据层是否就绪都要运行）
     require "ext_wdt"
-    require "led_blink"
+    require "net_led"
 
     -- 5. 传输层：按板型动态初始化 1~N 路 485
     if data_ok then

@@ -184,6 +184,8 @@ local function mqtt_client_main_task_func()
         retry_delay = RECONNECT_DELAY_MIN
         -- 把 client 交给 sender，由它按队列发送
         sys.sendMsg(sender.TASK_NAME, "MQTT_EVENT", "CONNECT_OK", mqtt_client)
+        -- 广播给外部监听者（LED / 网络状态等）
+        sys.publish("MQTT_CONNECTED")
 
         -- 4. 已连接后的常驻事件循环（阻塞等待，不设超时）
         while true do
@@ -227,6 +229,8 @@ local function mqtt_client_main_task_func()
         -- 5. 异常出口：清残留事件、通知 sender 断开、释放 client、退避后重连
         sys.cleanMsg(TASK_NAME)
         sys.sendMsg(sender.TASK_NAME, "MQTT_EVENT", "DISCONNECTED")
+        -- 广播给外部监听者（LED / 网络状态等）
+        sys.publish("MQTT_DISCONNECTED")
 
         if mqtt_client then
             mqtt_client:close()
