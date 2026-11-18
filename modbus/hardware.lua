@@ -121,6 +121,15 @@ local function port_send(port, data)
     return true
 end
 
+-- 从站口空闲超时是常态（没人来问），降级为 debug；问答口超时才是真问题
+local function log_timeout(port, timeout_ms)
+    if port.silent_timeout then
+        log.debug("485", "wait_response", port.name .. " 空闲无数据(" .. timeout_ms .. "ms)")
+    else
+        log.warn("485", "wait_response", port.name .. " 超时(" .. timeout_ms .. "ms)")
+    end
+end
+
 -- ============================================================
 -- 等待响应：先等首段数据，再等总线静默判定一帧结束
 -- ============================================================
@@ -131,11 +140,11 @@ local function port_wait_response(port, timeout_ms)
     while not (port.resp_buffer and #port.resp_buffer > 0) do
         local remain = timeout_ms - (mcu.ticks() - t0)
         if remain <= 0 then
-            log.warn("485", "wait_response", port.name .. " 超时(" .. timeout_ms .. "ms)")
+            log_timeout(port, timeout_ms)
             return nil, -1
         end
         if not sys.waitUntil(port.resp_event, remain) then
-            log.warn("485", "wait_response", port.name .. " 超时(" .. timeout_ms .. "ms)")
+            log_timeout(port, timeout_ms)
             return nil, -1
         end
     end
@@ -188,6 +197,7 @@ local function build_ports()
             resp_event       = "UART485_" .. string.upper(name) .. "_RESP",
             resp_buffer      = nil,
             clear_rx_on_send = p.clear_rx_on_send and true or false,
+            silent_timeout   = p.silent_timeout and true or false,
         }
         ports[name] = port
         port_by_uartid[port.uartid] = port

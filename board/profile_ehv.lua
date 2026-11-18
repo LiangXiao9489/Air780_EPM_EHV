@@ -63,6 +63,7 @@ return {
             en_pin = 25, en_level = 0, rs485_delay = 20000,
             baudrate = 9600, databits = 8, stopbits = 1, parity = "N",
             clear_rx_on_send = false,
+            silent_timeout = true,   -- 从站口空闲无请求是常态，超时不告警
         },
     },
 }

@@ -1,19 +1,19 @@
 --[[
 @module  main
 @summary Air780 EPM / EHV 二合一网关固件入口
-@version 1.3.0
+@version 1.5.0
 @date    2026.11.18
 @usage
-按块移植，当前进度：块 3（传输层：core + hardware + uart_lock）
+按块移植，当前进度：块 5（从站应答）
 
 已完成：
   块 1  板型识别 / 配置 / 看门狗 / LED
   块 2  点表展开 / store 缓存初始化
   块 3  Modbus 编解码 / 动态端口 / u1 互斥锁
+  块 4  EPM 主站轮询 / 485 写穿透
+  块 5  从站应答（两板共用，EPM 写穿透 / EHV 本地写）
 
 后续块逐步放开 require：
-  块 4  modbus/master + modbus/write_through
-  块 5  modbus/slave
   块 6  local_io/di + do + do_write + sampler
   块 7  wireless 网络与 MQTT 基础
   块 8  wireless 协议业务 + OTA
@@ -22,7 +22,7 @@
 require "sys"
 
 PROJECT = "Air780_EPM_EHV"
-VERSION = "1.3.0"
+VERSION = "1.5.0"
 
 pm.ioVol(pm.IOVOL_ALL_GPIO, 3300)
 
@@ -57,12 +57,25 @@ else
         local hardware = require "hardware"
         hardware.init()
 
-        -- u1 互斥锁只在 EPM（有主站链路）时加载
+        -- 6. 采集链路（板型相关）
         if board.is_epm then
+            -- EPM：u1 互斥锁 + 485 写穿透 + 主站轮询
             require "uart_lock"
+
+            local write_through = require "write_through"
+            store.set_writer(write_through.write)
+
+            require "master"
+
+            log.info("main", "块3+4 完成：传输层与 EPM 采集链路就绪")
+        else
+            -- EHV：无主站链路，采集由块 6 的本地采样负责
+            log.info("main", "块3 完成：传输层就绪（EHV 无主站链路，跳过块4）")
         end
 
-        log.info("main", "块3 完成：传输层就绪")
+        -- 7. 从站应答（两板共用，走 u2）
+        require "slave"
+        log.info("main", "块5 完成：从站就绪")
     end
 end
 
