@@ -107,7 +107,8 @@ local function build_data(filter, fixed_ts)
         if keep then
             local v  = (p.values and p.values[1]) or 0
             local ts = fixed_ts or p.ts
-            if not ts or ts == 0 then ts = os.time() end
+            -- 校时前采集的点 slot.ts 是 2000 年的假时间戳，上报时替换为当前时间
+            if not ts or ts < TIME_VALID_MIN then ts = os.time() end
 
             local dev_key = tostring(p.dev_id)
             d[dev_key] = d[dev_key] or {}
@@ -153,7 +154,8 @@ local function diff_data()
             last[p.dev_id][p.tag] = { v = v, q = q }
 
             local ts = p.ts
-            if not ts or ts == 0 then ts = os.time() end
+            -- 校时前采集的点 slot.ts 是 2000 年的假时间戳，上报时替换为当前时间
+            if not ts or ts < TIME_VALID_MIN then ts = os.time() end
 
             local dev_key = tostring(p.dev_id)
             d[dev_key] = d[dev_key] or {}
@@ -308,6 +310,19 @@ local function report_task()
     while not store_ready() do
         sys.wait(1000)
     end
+
+    -- 等校时完成再建快照：
+    -- 校时前 master 可能还没把点表扫完，快照里未初始化的点(q=0)
+    -- 与首轮采集(q=1)之间的质量位跳变会被 diff_data 误判为"变化"，
+    -- 导致每次上电都爆发一次全量 change。
+    -- 校时通常 5~10 秒完成，此时采集链路已经跑了好几轮，快照才是真实稳态。
+    -- 若一直校时失败，本 task 停在这里也合理：主循环所有上报都有 time_ok 门控，
+    -- 反正发不出去。
+    while os.time() < TIME_VALID_MIN do
+        sys.wait(1000)
+    end
+    -- 时间刚同步，再给采集 2 秒稳定窗口
+    sys.wait(2000)
 
     -- 开机先建快照，避免把"首次采集"整体当成变化上报
     commit_snapshot()
