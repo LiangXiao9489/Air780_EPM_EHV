@@ -44,6 +44,9 @@ local cfg = {}
 local REG = {
     upload_interval_min = { type = "number", min = 1,  max = 60 },
     change_check_sec    = { type = "number", min = 1,  max = 60 },
+    -- 主动上行开关：1=开启 0=关闭（默认关闭）
+    report_real_enable   = { type = "bool" },
+    report_change_enable = { type = "bool" },
 }
 
 -- 全量读取时的输出顺序（Lua 表无序，固定顺序方便平台对比）
@@ -68,6 +71,8 @@ end
 
 PARAM_ORDER[#PARAM_ORDER + 1] = "upload_interval_min"
 PARAM_ORDER[#PARAM_ORDER + 1] = "change_check_sec"
+PARAM_ORDER[#PARAM_ORDER + 1] = "report_real_enable"
+PARAM_ORDER[#PARAM_ORDER + 1] = "report_change_enable"
 
 -- 写使能（EPM：write_through_en / EHV：mqtt_do_en）
 REG[profile.write_enable_key] = { type = "bool" }

@@ -242,9 +242,9 @@ CLIENT_ID = "YEDtest_" .. board.name .. "_mqtt_" .. SN   -- 例："YEDtest_EPM_m
 
 | 类型 | 触发条件 | 间隔 | 内容 |
 | --- | --- | --- | --- |
-| `real` | 对齐整分钟整点（按 `upload_interval_min`，默认 5） | 5 分钟 | 全部点位，ti 和每个 tag 的 t 都是同一整点 |
-| `change` | DI 变化即时唤醒；或按 `change_check_sec`（默认 5s）周期比对快照 | 最多 5s（DI 变化 1s 内触发） | 只含本次变化的 tag |
-| `realIndex` | `/scr/${SN}` 下发 `indexReal` 指令 | iv 秒（指令指定） | 指定 tag 的快速上报；du 秒后自动停止 |
+| `real` | 对齐整分钟整点（按 `upload_interval_min`，默认 5）；受 `report_real_enable` 管控，默认关闭 | 5 分钟 | 全部点位，ti 和每个 tag 的 t 都是同一整点 |
+| `change` | DI 变化即时唤醒；或按 `change_check_sec`（默认 5s）周期比对快照；受 `report_change_enable` 管控，默认关闭 | 最多 5s（DI 变化 1s 内触发） | 只含本次变化的 tag |
+| `realIndex` | `/scr/${SN}` 下发 `indexReal` 指令（服务器控制，不受上述开关影响） | iv 秒（指令指定） | 指定 tag 的快速上报；du 秒后自动停止 |
 
 ### 5.8 indexReal（/scr/${SN} → /dcr/${SN} + /d/${SN}）
 
@@ -279,6 +279,8 @@ u2_stopbits          (requires_reboot)
 u2_parity            (requires_reboot)
 upload_interval_min
 change_check_sec
+report_real_enable
+report_change_enable
 write_through_en
 
 # EHV
@@ -288,6 +290,8 @@ u2_stopbits          (requires_reboot)
 u2_parity            (requires_reboot)
 upload_interval_min
 change_check_sec
+report_real_enable
+report_change_enable
 mqtt_do_en
 local_sample_ms      (requires_reboot)
 ```
@@ -402,6 +406,8 @@ set 时可带 `"sys_action": "reboot"` 或 `"sys_action": "factoryReset"`：
 | uX_parity | N |
 | upload_interval_min | 5 |
 | change_check_sec | 5 |
+| report_real_enable | false（关闭定时 real 主动上报） |
+| report_change_enable | false（关闭 change 主动上报） |
 | write_through_en / mqtt_do_en | true |
 | local_sample_ms | 500（仅 EHV） |
 

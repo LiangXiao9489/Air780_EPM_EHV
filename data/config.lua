@@ -59,6 +59,10 @@ end
 DEFAULT_CFG.upload_interval_min = 5   -- MQTT 实时数据上报间隔（分钟）
 DEFAULT_CFG.change_check_sec    = 5   -- 变化数据检测周期（秒）
 
+-- 主动上行开关（默认关闭，由平台下发 1 开启）
+DEFAULT_CFG.report_real_enable   = false
+DEFAULT_CFG.report_change_enable = false
+
 -- 写使能（名字按板型）
 DEFAULT_CFG[profile.write_enable_key] = true
 

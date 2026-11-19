@@ -342,6 +342,10 @@ local function report_task()
         if period_min < 1 then period_min = 1 end
         local period = period_min * 60
 
+        -- 主动上行开关（默认关闭）：每轮重读，set 后实时生效
+        local real_enable   = config.get("report_real_enable") == true
+        local change_enable = config.get("report_change_enable") == true
+
         local change_sec = tonumber(config.get("change_check_sec")) or 5
         if change_sec < 1 then change_sec = 1 end
 
@@ -379,15 +383,18 @@ local function report_task()
             local gap = cur_boundary - last_real_ts
             last_real_ts = cur_boundary
 
-            if gap <= period * 2 then
-                -- 正常跨过一个周期
-                send_real(cur_boundary)
-                did_real = true
-            else
-                -- 时钟跳变（例如 NTP 校准跨年）：只重新对齐，不发这条假整点
-                log.warn("mqtt.report", "时钟跳变，跳过本次整点上报",
-                         "gap=" .. gap .. "s",
-                         "new_boundary=" .. os.date("%Y-%m-%d %H:%M:%S", cur_boundary))
+            -- 关闭时仍推进 last_real_ts，重新开启后不会因 gap 过大被判成时钟跳变
+            if real_enable then
+                if gap <= period * 2 then
+                    -- 正常跨过一个周期
+                    send_real(cur_boundary)
+                    did_real = true
+                else
+                    -- 时钟跳变（例如 NTP 校准跨年）：只重新对齐，不发这条假整点
+                    log.warn("mqtt.report", "时钟跳变，跳过本次整点上报",
+                             "gap=" .. gap .. "s",
+                             "new_boundary=" .. os.date("%Y-%m-%d %H:%M:%S", cur_boundary))
+                end
             end
         end
 
@@ -406,7 +413,8 @@ local function report_task()
         -- 变化上报：到达周期检测；或者被 DI 变化事件唤醒时立刻检测一次
         local forced = woke and (now >= last_change_check + CHANGE_MIN_INTERVAL_SEC)
         if forced or now >= last_change_check + change_sec then
-            if not did_real then send_change() end
+            -- 关闭时仍推进检测时间，避免关闭期间积压
+            if change_enable and not did_real then send_change() end
             last_change_check = now
         end
     end

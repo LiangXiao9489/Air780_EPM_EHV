@@ -64,8 +64,6 @@ else
             store.set_writer(write_through.write)
 
             require "master"
-
-            log.info("main", "块3+4 完成：传输层与 EPM 采集链路就绪")
         else
             -- EHV：本地 DI/DO 采集，写入 store 后由从站/上报消费
             local di_mod = require "di"
@@ -76,25 +74,19 @@ else
 
             store.set_writer(require("do_write").write)
             require "sampler"
-
-            log.info("main", "块3+6 完成：传输层与本地 IO 采样就绪")
         end
 
         -- 7. 从站应答（两板共用，走 u2）
         require "slave"
-        log.info("main", "块5 完成：从站已加载")
 
         -- 8. 网络与 MQTT 链路（两板完全相同）
         require "net_4g"
         require "sntp"
         -- require "net_watchdog"   -- 网络看门狗：需要时再放开
         require "basic"
-        log.info("main", "块7 完成：4G/SNTP/MQTT 链路就绪")
 
         -- 9. 上行协议：real / change / realIndex（两板共用，数据源来自 store）
-        -- realIndex 的触发入口在块8b 的 down.lua，本块只验证 real / change
         require "report"
-        log.info("main", "块8a 完成：上行协议已加载")
     end
 end
 
