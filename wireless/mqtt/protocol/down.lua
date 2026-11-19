@@ -133,10 +133,11 @@ local TOPIC_HANDLERS = {
                     return
                 end
 
-                -- 本地 DO 板型（EHV）：mqtt_do_en=false 时禁止 MQTT 控制继电器，
-                -- 整台设备统一回 fail:["disabled"]（Modbus 上位机写入不受影响）
+                -- 写使能闸门（EPM：write_through_en / EHV：mqtt_do_en）：
+                -- 为 false 时禁止 MQTT 下发写点位，整台设备统一回 fail:["disabled"]
+                -- （Modbus 上位机对从站的直接写入不受影响）
                 local enable_key = board.profile.write_enable_key
-                if board.profile.has_local_io and config.get(enable_key) ~= true then
+                if config.get(enable_key) ~= true then
                     log.warn("mqtt.down", "set 被禁止", enable_key .. "=false")
                     for dev_id, body in pairs(msg.d or {}) do
                         sender.publish(topics.UP_DATA,
