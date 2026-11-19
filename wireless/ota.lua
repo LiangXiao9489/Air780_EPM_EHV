@@ -17,7 +17,7 @@
   - 自动处理残留文件：size 正确 → 复用并做 CRC；size 错 → 删了重下；
   - CRC 校验失败自动重下一次；
   - 下载完成后发 otaDownloadAck，校验完成后发 otaVerifyAck；
-  - 两条 ack 都发完才开始 fota 写入，写入成功等待 2 秒再 reboot；
+  - 两条 ack 都发完才开始 fota 写入，写入成功立即 reboot；
   - 升级期间采集/从站正常工作，不中断；
   - 但新的 OTA 指令和 sys_action（reboot/factoryReset）会被拦截。
 
@@ -332,8 +332,8 @@ local function do_fota()
     local ok, done = fota.isDone()
     if ok and done then
         fota.finish(true)
-        log.warn("mqtt.ota", "固件写入成功，2 秒后重启")
-        sys.wait(2000)
+        log.warn("mqtt.ota", "固件写入成功准备重启")
+        sys.wait(100)   -- 给日志口留出发送时间，避免重启前日志丢失
         rtos.reboot()
         return true
     end
