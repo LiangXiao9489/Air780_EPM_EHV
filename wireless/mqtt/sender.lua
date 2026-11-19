@@ -10,6 +10,7 @@
    topic 由调用方决定，所以天然支持多上行主题；
 2、sender task 一次只发一条，qos>0 要等到 PUBLISH_OK 才发下一条，保证顺序；
    qos0 没有 PUBACK，publish 返回即视为成功，继续发下一条；
+   qos>0 等待 ACK 超过 ACK_TIMEOUT_MS 会按失败重试，超过 MAX_RETRY 则丢弃，避免堵死队列；
 3、断线时队列不丢：在途数据退回队首，重连后自动重发；
    同步发送失败最多重试 MAX_RETRY 次，超过才回调失败并丢弃；
 4、队列有上限，满了丢最旧的一条并回调失败，避免离线期间无限增长。
@@ -33,6 +34,10 @@ local MAX_QUEUE = 64
 local MAX_RETRY = 3
 -- 有积压但发不出去时的重试间隔（毫秒）
 local RETRY_INTERVAL_MS = 1000
+-- qos>0 等待 PUBACK 的超时（毫秒）：超时按失败重试，避免在途项永久占位堵死队列
+local ACK_TIMEOUT_MS = 10000
+-- 有在途项时的等待切片（毫秒），用于周期性检查 ACK 是否超时
+local ACK_POLL_MS = 1000
 
 -- 发送队列，元素结构：
 -- {topic=string, payload=string, qos=number, cb=function|nil, cb_para=any, retry=number, msgid=number}
@@ -63,6 +68,7 @@ local function publish_item(mqtt_client)
             else
                 -- qos1/2：result 是 message id，等 "sent"/PUBLISH_OK 再推进
                 item.msgid = result
+                item.at    = mcu.ticks()   -- 记录发送时刻，用于 ACK 超时判断
                 return item
             end
         else
@@ -86,17 +92,41 @@ local function sender_task_func()
     local msg
 
     while true do
-        -- 有积压却发不出去时用短超时定期重试，空闲时长时间阻塞
+        -- 有在途项时用短切片周期性检查 ACK 超时；
+        -- 有积压却发不出去时用短超时定期重试；空闲时长时间阻塞
         local timeout = 60000
-        if mqtt_client and not send_item and #send_queue > 0 then
+        if send_item then
+            timeout = ACK_POLL_MS
+        elseif mqtt_client and #send_queue > 0 then
             timeout = RETRY_INTERVAL_MS
         end
 
         msg = sys.waitMsg(sender.TASK_NAME, "MQTT_EVENT", timeout)
 
         if not msg then
-            -- 超时：处理"同步发送失败后等待重试"的情况
-            if mqtt_client and not send_item and #send_queue > 0 then
+            if send_item then
+                -- ACK 超时：重发或丢弃，避免单个在途项永久堵死整条上行队列
+                if mcu.ticks() - (send_item.at or 0) >= ACK_TIMEOUT_MS then
+                    local item = send_item
+                    send_item = nil
+                    item.retry = (item.retry or 0) + 1
+
+                    if item.retry >= MAX_RETRY then
+                        log.error("mqtt.send", "ack timeout, drop",
+                                  item.topic, "retry=" .. item.retry)
+                        finish_item(item, false)
+                    else
+                        log.warn("mqtt.send", "ack timeout, retry",
+                                 item.topic, "retry=" .. item.retry)
+                        table.insert(send_queue, 1, item)
+                    end
+
+                    if mqtt_client and #send_queue > 0 then
+                        send_item = publish_item(mqtt_client)
+                    end
+                end
+            elseif mqtt_client and #send_queue > 0 then
+                -- 超时：处理"同步发送失败后等待重试"的情况
                 send_item = publish_item(mqtt_client)
             end
 

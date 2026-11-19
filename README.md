@@ -507,3 +507,10 @@ set 时可带 `"sys_action": "reboot"` 或 `"sys_action": "factoryReset"`：
 - 修改：阶段 2 增加总超时（复用 `timeout_ms`）。超时后打印 `帧未结束，强制丢弃` 的 warn，清空 `resp_buffer` 并按超时返回 `nil, -1`。
 - 副作用：正常从机响应在 1~20ms 内收完，不会触发该上限，行为不变；异常场景下单次事务最多多消耗约一个 `timeout_ms`，随后按超时失败处理，半帧不会被误当成有效数据。
 - 预期结果：u1 锁持有时间被封顶，总线异常后主站轮询与写穿透能自行恢复，不再出现永久停摆。
+
+### 2026-11-19 MQTT qos>0 在途消息无 ACK 超时导致上行队列堵死
+
+- 问题：`wireless/mqtt/sender.lua` 中 qos>0 的消息发出后进入 `send_item`，只有收到 msgid 匹配的 `PUBLISH_OK` 才会推进；msgid 不匹配仅打印 warn。若 broker 已收到但 ACK 丢失、而连接又未断开，`send_item` 会永久占位，后续所有上行消息都无法发送，只有等 MQTT 断线重连才恢复。
+- 修改：为 `send_item` 记录发送时刻，sender task 在有在途项时每秒检查一次；超过 `ACK_TIMEOUT_MS`（10s）未收到 ACK 时，按失败计数重试，重试达到 `MAX_RETRY`（3 次）后回调失败并丢弃，队列继续发送下一条。迟到的旧 msgid ACK 仍按原有逻辑忽略。
+- 副作用：弱网下可能出现重复投递（qos1 本身是 at-least-once，平台可按 `t`/`mid` 去重）；单条消息最坏多等待约 30s 后丢弃，但不影响后续消息。qos0 上行不受影响。
+- 预期结果：ACK 丢失或 msgid 异常不再导致“在线但永久不上报”，发送队列可自愈。
