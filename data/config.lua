@@ -59,6 +59,11 @@ end
 DEFAULT_CFG.upload_interval_min = 5   -- MQTT 实时数据上报间隔（分钟）
 DEFAULT_CFG.change_check_sec    = 5   -- 变化数据检测周期（秒）
 
+-- 点表编号（仅 EPM）：1=测试点表 2=机组点表，修改后重启生效
+if board.is_epm then
+    DEFAULT_CFG.point_table_id = 1
+end
+
 -- 主动上行开关（默认关闭，由平台下发 1 开启）
 DEFAULT_CFG.report_real_enable   = false
 DEFAULT_CFG.report_change_enable = false

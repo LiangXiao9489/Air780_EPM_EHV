@@ -39,7 +39,7 @@ Air780_EPM_EHV/
 │
 ├── data/
 │   ├── config.lua                 运行时参数（/gateway_cfg.json 落盘）；默认值按 profile 裁剪
-│   ├── point_table.lua            点表：两个子块 epm_points / ehv_points，由 profile 选择
+│   ├── point_table.lua            点表：EPM 多套（point_table_id 1/2 选择）/ EHV 单套，由 profile 决定
 │   └── store.lua                  统一缓存层：地址双映射 / set_by_tag / writer 注册 / get_point_values
 │
 ├── device/
@@ -139,6 +139,15 @@ Air780_EPM_EHV/
     ch         = 4,                -- EHV 本地 IO 通道号（DI/DO 用；EPM 无意义）
 }
 ```
+
+EPM 可能接不同型号的从机，点表按型号硬编码多份，由参数 `point_table_id` 选择：
+
+| point_table_id | 点表 | meta.protocol_version |
+| --- | --- | --- |
+| 1（默认） | 测试点表 | `EPM_test_1.0.0`（something1 / coilDemo …） |
+| 2 | 机组点表 | `EPM_chiller_1.0.0`（机组状态 / 制冷控制温度 …） |
+
+修改 `point_table_id` 后需重启生效；`meta.protocol_version` 仅作说明，代码不读取、不上报。EHV 只有一套点表，无此参数。
 
 ### 4.3 功能码支持
 
@@ -281,6 +290,7 @@ upload_interval_min
 change_check_sec
 report_real_enable
 report_change_enable
+point_table_id       (requires_reboot, 仅 EPM)
 write_through_en
 
 # EHV
@@ -408,12 +418,13 @@ set 时可带 `"sys_action": "reboot"` 或 `"sys_action": "factoryReset"`：
 | change_check_sec | 5 |
 | report_real_enable | false（关闭定时 real 主动上报） |
 | report_change_enable | false（关闭 change 主动上报） |
+| point_table_id | 1（仅 EPM；1=测试点表 2=机组点表） |
 | write_through_en / mqtt_do_en | true |
 | local_sample_ms | 500（仅 EHV） |
 
 ### 复位后生效的参数
 
-串口波特率/数据位/停止位/校验位 与 `local_sample_ms` 修改后需重启才生效（`sys_need_reboot="1"`）。
+串口波特率/数据位/停止位/校验位、`local_sample_ms` 以及 EPM 的 `point_table_id` 修改后需重启才生效（`sys_need_reboot="1"`）。
 
 ---
 

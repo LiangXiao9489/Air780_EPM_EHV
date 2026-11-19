@@ -74,6 +74,12 @@ PARAM_ORDER[#PARAM_ORDER + 1] = "change_check_sec"
 PARAM_ORDER[#PARAM_ORDER + 1] = "report_real_enable"
 PARAM_ORDER[#PARAM_ORDER + 1] = "report_change_enable"
 
+-- 点表编号（仅 EPM）：1=测试点表 2=机组点表，修改后重启生效
+if board.is_epm then
+    REG.point_table_id = { type = "number", min = 1, max = 2, requires_reboot = true }
+    PARAM_ORDER[#PARAM_ORDER + 1] = "point_table_id"
+end
+
 -- 写使能（EPM：write_through_en / EHV：mqtt_do_en）
 REG[profile.write_enable_key] = { type = "bool" }
 PARAM_ORDER[#PARAM_ORDER + 1] = profile.write_enable_key
