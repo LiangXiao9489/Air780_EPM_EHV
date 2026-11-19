@@ -150,7 +150,10 @@ local function port_wait_response(port, timeout_ms)
     end
 
     -- 阶段2：等总线静默（连续 frame_gap_ms 没有新数据，认为一帧收完）
+    -- 必须有总超时：总线持续噪声/设备连续吐数据时"静默"永远不成立，
+    -- 会让持有 u1 锁的调用方永久卡死，因此超时后丢弃本帧按超时返回。
     local last_len
+    local t1 = mcu.ticks()
     repeat
         if not port.resp_buffer then
             log.warn("485", "wait_response", port.name .. " resp_buffer 意外为 nil")
@@ -158,6 +161,12 @@ local function port_wait_response(port, timeout_ms)
         end
         last_len = #port.resp_buffer
         sys.wait(frame_gap_ms)
+        if mcu.ticks() - t1 > timeout_ms then
+            log.warn("485", "wait_response", port.name .. " 帧未结束，强制丢弃",
+                     "len=" .. #port.resp_buffer, "waited_ms=" .. (mcu.ticks() - t1))
+            port.resp_buffer = nil
+            return nil, -1
+        end
     until port.resp_buffer and #port.resp_buffer == last_len
 
     local data = port.resp_buffer
