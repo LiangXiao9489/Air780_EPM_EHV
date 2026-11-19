@@ -12,7 +12,7 @@ LuatOS 工程：EPM（D700Tm / Air780EPM）与 EHV（SW1004V-10 / Air780EHV）**
 | 模组 | Air780EPM | Air780EHV |
 | 底板 | D700Tm 系列（3 路 RS485） | SW1004V-10 系列（2 路 RS485 + 4DI + 4DO） |
 | 角色 | **协议转换网关** — 主站轮询 485 从机 + 从站应答上位机 | **Modbus 从站 + 本地 IO** — 从站应答上位机，无协议转换 |
-| 固件版本 | `VERSION = "1.8.0"`（main.lua） | 同左（共用一套固件） |
+| 固件版本 | `VERSION = "1.0"`（main.lua，调试期固定） | 同左（共用一套固件） |
 | 构建 | LuatIDE 下载 EPM 固件到 EPM 板、下载 EHV 固件到 EHV 板；**打包脚本相同**，靠 `rtos.bsp()` 在运行时识别 |
 
 ### 为什么二合一
@@ -330,7 +330,7 @@ set 时可带 `"sys_action": "reboot"` 或 `"sys_action": "factoryReset"`：
 ### 7.2 流程
 
 1. 空间检查（剩余空间 ≥ 固件 / 0.9）；
-2. HTTP GET 下载到 `/Air780_EPM_EHV_upgrade.bin`（以 PROJECT 命名，避免和其它工程冲突）；
+2. HTTP GET 下载到 `/air780EpmEhvCombo_upgrade.bin`（以 PROJECT 命名，避免和其它工程冲突）；
 3. 如有完整残留文件（size 一致），跳过下载直接 CRC；
 4. CRC32 校验（crypto.crc32）。失败则自动重下一次；
 5. 下载 + CRC 通过 → 先回 `otaDownloadAck success`，再回 `otaVerifyAck success`；
@@ -433,7 +433,7 @@ set 时可带 `"sys_action": "reboot"` 或 `"sys_action": "factoryReset"`：
 ### 开机日志关键行
 
 ```
-[main] =========== 当前模组:[RDA780EPM] 固件版本 [1.8.0] ===========
+[main] =========== 当前模组:[RDA780EPM] 固件版本 [1.0] ===========
 [board] 识别到板型 EPM bsp=RDA780EPM
 [board] 端口 u1 uartid=1 en_pin=25 启用=true
 ...
@@ -449,7 +449,7 @@ set 时可带 `"sys_action": "reboot"` 或 `"sys_action": "factoryReset"`：
 
 | # | 块 | 涉及文件 | 状态 |
 | --- | --- | --- | --- |
-| 1 | 地基 | board.lua / profile_* / config.lua / ext_wdt.lua / led_blink.lua | ✅ |
+| 1 | 地基 | board.lua / profile_* / config.lua / ext_wdt.lua / net_led.lua / reset_btn.lua | ✅ |
 | 2 | 数据层 | point_table.lua / store.lua | ✅ |
 | 3 | Modbus 基础 | core.lua / hardware.lua / uart_lock.lua | ✅ |
 | 4 | EPM 采集 | master.lua / write_through.lua | ✅ |
@@ -464,6 +464,13 @@ set 时可带 `"sys_action": "reboot"` 或 `"sys_action": "factoryReset"`：
 - `/scr/${SN}` 的 `his` 历史召回、`ctr` 通用控制（目前只打占位日志）；
 - `/d/${SN}` 断点续传（UP_RESUME 主题）；
 - 自定义上报间隔修改后立即生效（目前 upload_interval_min 修改后重启生效）。
+
+### 当前限制（已知，按需扩展）
+
+- **EPM 只支持单物理从机**：point_table.meta.slave_dev 写死为 `{1}`，所有点位都归到 Modbus 从机地址 1，MQTT 设备 ID 固定为字符串 `"1"`。若现场需接多个不同地址的物理从机（如 slave 1 接温湿度、slave 3 接电表），需在点表 schema 中新增 `slave_addr` 字段，master.lua 按字段分组轮询，write_through.lua 按字段路由到正确从机。MQTT 协议层（`d` 的 key = DEV_ID）无需改动，届时 `d` 的 key 就是物理从机地址字符串；
+- **EHV 的 mqtt_do_en 只拦截 MQTT 下行**：Modbus 上位机走 u2 写 DO 不受此开关影响。如需要"什么都不能写 DO"的硬锁死，需新增更狠的开关（如 `do_write_en`）放在 `do_write.lua` 入口处；
+- **上报 store 未就绪时不回 setack**：点表解析失败导致 store.init() 返回 false 时，MQTT 下行 set 会直接 return，服务器等超时无响应。现场通过开机日志判断（"store 初始化失败"）；
+- **设备数据 set 失败不写 sys_last_error**：只有网关参数写入失败才写 sys_last_error。设备数据写入失败（485 超时、tag 只读、值非法等）只体现在 setack 的 fail/not_found 数组里，服务器需在 setack 里查错。
 
 ---
 

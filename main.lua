@@ -1,34 +1,30 @@
 --[[
 @module  main
 @summary Air780 EPM / EHV 二合一网关固件入口
-@version 1.8.0
+@version 1.0
 @date    2026.11.18
 @usage
-按块移植，当前进度：块 8b（下行 down / 参数 cfg / OTA）
-
-已完成：
-  块 1  板型识别 / 配置 / 看门狗 / LED
-  块 2  点表展开 / store 缓存初始化
-  块 3  Modbus 编解码 / 动态端口 / u1 互斥锁
-  块 4  EPM 主站轮询 / 485 写穿透
-  块 5  从站应答（两板共用）
-  块 6  EHV 本地 DI/DO 驱动 / 本地采样 / 本地写
-  块 7  wireless 网络与 MQTT 基础
-  块 8a MQTT 上行协议（up / ack / report）
-  块 8b MQTT 下行协议（down / cfg）+ OTA
-
-后续：全链路联调（call / set / indexReal / OTA / 断线重连）
 ]]
 
 require "sys"
 
-PROJECT = "Air780_EPM_EHV"
-VERSION = "1.8.0"
+PROJECT = "air780EpmEhvCombo"
+VERSION = "1.0"
 
 pm.ioVol(pm.IOVOL_ALL_GPIO, 3300)
 
-log.info("main", "=========== 当前模组:[" .. rtos.bsp() .. "] 固件版本 [" .. VERSION .. "] ===========")
-log.info("main", "=========== 芯片 UID [" .. mcu.unique_id():toHex() .. "] ===========")
+-- 日志开关：放开只输出error
+-- log.setLevel(log.LOG_ERROR)
+
+-- 启动信息（用 error 级别，日志被屏蔽时仍能打印）
+log.error("main", "====================================================")
+log.error("main", "====================================================")
+log.error("main", "工程名称: " .. PROJECT)
+log.error("main", "固件版本: " .. VERSION)
+log.error("main", "当前模组: " .. rtos.bsp())
+log.error("main", "芯片SN: " .. mcu.unique_id():toHex())
+log.error("main", "====================================================")
+log.error("main", "====================================================")
 
 -- 1. 板型识别：必须最先，后续所有硬件资源都依赖它
 local board = require "board"

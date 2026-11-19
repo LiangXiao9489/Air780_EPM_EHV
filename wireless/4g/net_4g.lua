@@ -6,12 +6,11 @@
 @usage
 本文件负责 4G 蜂窝网络的初始化与状态监控：
 
-1. 打印 IMEI
-2. 设置 SIM 通道（贴片卡接 SIM2 / GPIO 模拟通道）
-3. 监听 SIM_IND，打印 SIM 卡状态变化
-4. 监听 IP_READY，设置自定义 DNS 并打印本机 IP
-5. 监听 IP_LOSE，打印断网警告
-6. 延时打印 ICCID / IMSI
+1. 设置 SIM 通道（贴片卡接 SIM2 / GPIO 模拟通道）
+2. 监听 SIM_IND，打印 SIM 卡状态变化
+3. 监听 IP_READY，设置自定义 DNS 并打印本机 IP
+4. 监听 IP_LOSE，打印断网警告
+5. 延时统一打印 IMEI / IMSI / ICCID
 
 所有参数直接写死在文件内，不依赖 config。
 ]]
@@ -27,9 +26,7 @@ local DNS_SECONDARY      = "114.114.114.114"      -- 国内通用 DNS
 -- ============================================================
 -- 设备信息
 -- ============================================================
--- IMEI 真机上读硬件，模拟器/无卡时回退到硬编码值
-local IMEI = (mobile and mobile.imei()) or "111111111111111"
-log.info("IMEI", "当前模组的IMEI: ", IMEI)
+-- IMEI / IMSI / ICCID 在 SIM 就绪后统一打印（见下方延时任务）
 
 -- ============================================================
 -- SIM 卡初始化
@@ -43,12 +40,22 @@ sys.subscribe("SIM_IND", function(status)
     log.info("SIM", "状态: ", status, "当前SIM通道: ", mobile.simid())
 end)
 
--- 延时后打印 SIM 卡信息（ICCID / IMSI）
+-- 延时后统一打印设备标识（IMEI / IMSI / ICCID）
 sys.taskInit(function()
     sys.wait(SIM_INFO_DELAY_MS)
-    log.info("SIM", "当前SIM通道: ", mobile.simid())
-    log.info("SIM", "ICCID: ", mobile.iccid() or "无")
-    log.info("SIM", "IMSI: ", mobile.imsi() or "无")
+
+    local imei  = (mobile and mobile.imei()) or "无"
+    local imsi  = mobile.imsi() or "无"
+    local iccid = mobile.iccid() or "无"
+
+    log.error("SIM", "====================================================")
+    log.error("SIM", "====================================================")
+    log.error("SIM", "当前SIM通道: " .. mobile.simid())
+    log.error("SIM", "IMEI: " .. imei)
+    log.error("SIM", "IMSI: " .. imsi)
+    log.error("SIM", "ICCID: " .. iccid)
+    log.error("SIM", "====================================================")
+    log.error("SIM", "====================================================")
 end)
 
 -- ============================================================

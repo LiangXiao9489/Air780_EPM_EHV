@@ -43,7 +43,7 @@ local cfg    = require "cfg"
 local ota = {}
 
 -- 固件存储路径：带项目名，避免和其他工程互相覆盖
-local PROJECT_NAME  = (PROJECT and PROJECT ~= "") and PROJECT or "Air780_EPM_EHV"
+local PROJECT_NAME  = (PROJECT and PROJECT ~= "") and PROJECT or "air780EpmEhvCombo"
 local FIRMWARE_PATH = "/" .. PROJECT_NAME .. "_upgrade.bin"
 
 -- HTTP 下载超时（毫秒）
